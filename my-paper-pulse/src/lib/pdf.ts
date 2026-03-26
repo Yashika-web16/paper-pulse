@@ -1,10 +1,11 @@
 import * as pdfjsLib from 'pdfjs-dist';
-// @ts-ignore
-import pdfWorker from 'pdfjs-dist/build/pdf.worker.mjs?url';
 
-// Initialize PDF.js worker
-pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorker;
+// Set up the worker (essential for PDF.js to work in a browser/Vite environment)
+pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
 
+/**
+ * Extracts raw text from a PDF file
+ */
 export async function extractTextFromPDF(file: File): Promise<string> {
   const arrayBuffer = await file.arrayBuffer();
   const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
@@ -22,7 +23,10 @@ export async function extractTextFromPDF(file: File): Promise<string> {
   return fullText;
 }
 
-export function fileToBase64(file: File): Promise<string> {
+/**
+ * Converts a File object to a Base64 string (useful for sending images/PDFs to Gemini)
+ */
+export async function fileToBase64(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.readAsDataURL(file);
