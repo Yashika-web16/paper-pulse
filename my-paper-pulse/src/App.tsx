@@ -7,9 +7,11 @@ import { DiagramView } from './components/DiagramView';
 import { ChatPanel } from './components/ChatPanel';
 import { HistorySidebar } from './components/HistorySidebar';
 import { SettingsModal, THEMES, Theme } from './components/SettingsModal';
-import { PaperAnalysis } from './types';
-import { analyzePaper } from './lib/gemini'; // Core analysis function
-import { extractTextFromPDF, fileToBase64 } from './lib/pdf';
+import { ComparisonView } from './components/ComparisonView';
+import { PaperAnalysis, ComparisonResult } from './types';
+import { analyzePaper, comparePapers } from './lib/gemini'; // Core analysis function
+import pdfUtils from './lib/pdf';
+const { extractTextFromPDF, fileToBase64 } = pdfUtils;
 import { motion, AnimatePresence } from 'motion/react';
 import { LayoutDashboard, MessageSquare, FileText, BarChart3, Network, RefreshCw, Sparkles, Download, Table, History, Settings } from 'lucide-react';
 
@@ -17,6 +19,8 @@ type Tab = 'dashboard' | 'chat';
 
 export default function App() {
   const [analysis, setAnalysis] = useState<PaperAnalysis | null>(null);
+  const [comparison, setComparison] = useState<ComparisonResult | null>(null);
+  const [selectedPaperIds, setSelectedPaperIds] = useState<string[]>([]);
   const [paperContent, setPaperContent] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<Tab>('dashboard');
@@ -62,9 +66,47 @@ export default function App() {
 
   const selectFromHistory = (item: PaperAnalysis) => {
     setAnalysis(item);
+    setComparison(null);
     setPaperContent(''); // We don't store raw text in history to save space
     setActiveTab('dashboard');
     setIsHistoryOpen(false);
+  };
+
+  const togglePaperSelection = (id: string) => {
+    setSelectedPaperIds(prev => 
+      prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
+    );
+  };
+
+  const handleCompare = async () => {
+    if (selectedPaperIds.length < 2) return;
+    
+    setIsLoading(true);
+    setIsHistoryOpen(false);
+    
+    try {
+      // We need the content for comparison. Since we don't store it in history,
+      // for this demo we'll use the summary and key insights as a proxy if raw content isn't available,
+      // or we could prompt the user that comparison works best with recently uploaded papers.
+      // Better: we'll use the analysis data itself for comparison.
+      const papersToCompare = history
+        .filter(h => selectedPaperIds.includes(h.id))
+        .map(h => ({
+          id: h.id,
+          title: h.title,
+          content: `Summary: ${h.summary}\n\nKey Insights: ${h.keyInsights.join(', ')}\n\nMethodology: ${h.methodology}\n\nResults: ${h.results}`
+        }));
+
+      const result = await comparePapers(papersToCompare);
+      setComparison(result);
+      setAnalysis(null);
+      setActiveTab('dashboard');
+    } catch (error: any) {
+      console.error('Comparison failed:', error);
+      alert(`Comparison Error: ${error.message}`);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleFileSelect = async (file: File) => {
@@ -93,9 +135,10 @@ export default function App() {
       
       setAnalysis(analysisWithMeta);
       saveToHistory(analysisWithMeta);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Analysis failed:', error);
-      alert('Failed to analyze paper. Please try again.');
+      const errorMessage = error?.message || 'Failed to analyze paper. Please try again.';
+      alert(`Error: ${errorMessage}`);
     } finally {
       setIsLoading(false);
     }
@@ -103,6 +146,8 @@ export default function App() {
 
   const reset = () => {
     setAnalysis(null);
+    setComparison(null);
+    setSelectedPaperIds([]);
     setActiveTab('dashboard');
   };
 
@@ -238,11 +283,14 @@ export default function App() {
         onSelect={selectFromHistory}
         onDelete={deleteFromHistory}
         onClear={clearHistory}
+        selectedIds={selectedPaperIds}
+        onToggleSelect={togglePaperSelection}
+        onCompare={handleCompare}
       />
 
       <main className="pt-32 pb-20 px-6 max-w-7xl mx-auto">
         <AnimatePresence mode="wait">
-          {!analysis ? (
+          {!analysis && !comparison ? (
             <motion.div
               key="upload"
               initial={{ opacity: 0, scale: 0.9 }}
@@ -268,17 +316,22 @@ export default function App() {
               animate={{ opacity: 1, y: 0 }}
               className="space-y-12"
             >
-              {activeTab === 'dashboard' ? (
+              {comparison ? (
+                <ComparisonView 
+                  result={comparison!} 
+                  papers={history.filter(h => comparison!.paperIds.includes(h.id))} 
+                />
+              ) : (activeTab === 'dashboard' && analysis) ? (
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
                   <div className="lg:col-span-2 space-y-12">
-                    <SummaryView analysis={analysis} />
+                    <SummaryView analysis={analysis!} />
                     
                     <div className="space-y-8">
                       <h3 className="text-3xl font-display font-black uppercase tracking-tighter flex items-center gap-3">
                         <BarChart3 className="text-neon-blue" />
                         Data <span className="text-neon-blue">Analytics</span>
                       </h3>
-                      <ChartsView data={analysis.chartData} />
+                      <ChartsView data={analysis!.chartData} />
                     </div>
 
                     <div className="space-y-8">
@@ -286,19 +339,24 @@ export default function App() {
                         <Network className="text-neon-pink" />
                         Concept <span className="text-neon-pink">Map</span>
                       </h3>
-                      <DiagramView data={analysis.diagramData} />
+                      <DiagramView data={analysis!.diagramData} />
                     </div>
                   </div>
 
                   <div className="space-y-12">
                     <div className="sticky top-32">
-                      <ProcessFlow steps={analysis.processSteps} />
+                      <ProcessFlow steps={analysis!.processSteps} />
                     </div>
                   </div>
                 </div>
-              ) : (
+              ) : analysis ? (
                 <div className="h-[70vh]">
                   <ChatPanel paperContent={paperContent} />
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center min-h-[40vh] text-center">
+                  <p className="text-white/40 font-bold uppercase tracking-widest">No analysis data available. Please upload a paper.</p>
+                  <button onClick={reset} className="mt-4 px-8 py-3 bg-neon-green text-black font-bold rounded-xl">Try Again</button>
                 </div>
               )}
             </motion.div>
