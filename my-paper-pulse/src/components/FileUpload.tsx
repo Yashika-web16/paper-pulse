@@ -48,14 +48,6 @@ export const FileUpload: React.FC<FileUploadProps> = ({ onFileSelect, isLoading 
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
       >
-        <input
-          type="file"
-          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
-          onChange={handleFileInput}
-          accept=".pdf,image/*"
-          disabled={isLoading}
-        />
-        
         <div className={`
           p-12 rounded-3xl border-4 border-dashed transition-all duration-500
           ${isDragging 
@@ -89,12 +81,30 @@ export const FileUpload: React.FC<FileUploadProps> = ({ onFileSelect, isLoading 
                 </p>
               </div>
 
-              <div className="brutal-btn">
-                Browse Files
+              <div className="mt-8 relative z-[100]">
+                <button 
+                  type="button"
+                  className="px-12 py-5 bg-[#00FF00] text-black font-black uppercase tracking-[0.3em] border-4 border-black shadow-[10px_10px_0px_0px_rgba(0,0,0,1)] hover:translate-x-[5px] hover:translate-y-[5px] hover:shadow-none transition-all active:scale-95 cursor-pointer"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+                    if (input) input.click();
+                  }}
+                >
+                  Browse Files
+                </button>
               </div>
             </>
           )}
         </div>
+
+        <input
+          type="file"
+          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-50"
+          onChange={handleFileInput}
+          accept=".pdf,image/*"
+          disabled={isLoading}
+        />
       </motion.div>
       
       <div className="mt-8 grid grid-cols-3 gap-4 text-center">
