@@ -46,3 +46,17 @@ export interface ChatMessage {
   role: 'user' | 'model';
   content: string;
 }
+
+export interface ComparisonResult {
+  id: string;
+  timestamp: number;
+  paperIds: string[];
+  similarities: string[];
+  differences: string[];
+  contradictions: string[];
+  synthesis: string;
+  comparisonTable: {
+    feature: string;
+    values: { [paperId: string]: string };
+  }[];
+}
