@@ -1,7 +1,0 @@
-package.json – lists all dependencies (react, lucide-react, vite, tailwindcss, etc.)
-package-lock.json – locks exact versions
-.env.example – shows which env variables are required (VITE_OPENROUTER_API_KEY)
-src/ – all your React code
-public/ – static files
-vite.config.ts – Vite configuration
-tsconfig.json – TypeScript config
