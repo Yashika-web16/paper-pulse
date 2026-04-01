@@ -25,16 +25,18 @@ async function callGeminiWithRetry<T>(fn: () => Promise<T>, maxRetries = 5): Pro
       const isQuotaError = errorMessage.includes('429') || errorMessage.toLowerCase().includes('quota');
       const isOverloadedError = errorMessage.includes('503') || errorMessage.toLowerCase().includes('high demand') || errorMessage.toLowerCase().includes('overloaded');
       
-      if ((isQuotaError || isOverloadedError) && i < maxRetries - 1) {
-        // Exponential backoff with jitter
-        const baseWaitTime = Math.pow(2, i) * 1000;
-        const jitter = Math.random() * 1000;
-        const waitTime = baseWaitTime + jitter;
+      if (isQuotaError || isOverloadedError) {
+        const errorType = isQuotaError ? "Quota Exceeded" : "Server Overload";
+        const waitTime = Math.round(Math.pow(2, i) * 1000 / 1000);
+        console.warn(`[Gemini] ${errorType} hit. Retrying in ${waitTime}s... (Attempt ${i + 1}/${maxRetries})`);
         
-        const errorType = isQuotaError ? "Quota" : "Server Overload";
-        console.warn(`[Gemini] ${errorType} hit. Retrying in ${Math.round(waitTime)}ms... (Attempt ${i + 1}/${maxRetries})`);
+        if (i === maxRetries - 1) {
+          if (isQuotaError) {
+            throw new Error("API Quota Exceeded. \n\nGoogle's free tier has a limit on how many requests you can make per minute. \n\nFIX: Please wait 60 seconds and try again, or use a different API key for your presentation.");
+          }
+        }
         
-        await new Promise(resolve => setTimeout(resolve, waitTime));
+        await new Promise(resolve => setTimeout(resolve, Math.pow(2, i) * 1000 + Math.random() * 1000));
         continue;
       }
       
@@ -59,14 +61,18 @@ interface VectorNode {
 let vectorDatabase: VectorNode[] = [];
 
 /**
- * Splits text into chunks of approximately 1000 characters with 200 character overlap.
+ * Splits text into chunks of approximately 2000 characters with 300 character overlap.
  */
-function chunkText(text: string, size: number = 1000, overlap: number = 200): string[] {
+function chunkText(text: string, size: number = 2000, overlap: number = 300): string[] {
   const chunks: string[] = [];
   let start = 0;
-  while (start < text.length) {
-    const end = Math.min(start + size, text.length);
-    chunks.push(text.substring(start, end));
+  // Limit total text processed for embeddings to save quota (approx 50k chars)
+  const maxText = 50000;
+  const truncatedText = text.substring(0, maxText);
+  
+  while (start < truncatedText.length) {
+    const end = Math.min(start + size, truncatedText.length);
+    chunks.push(truncatedText.substring(start, end));
     start += size - overlap;
   }
   return chunks;
@@ -153,8 +159,8 @@ export async function analyzePaper(content: string | { data: string; mimeType: s
     throw new Error("Gemini API key is missing. \n\nLocal Fix: Ensure your .env file has GEMINI_API_KEY=your_key and RESTART your terminal/server.");
   }
   
-  // Primary model is Pro 3.1 for complex analysis, fallback is Flash 3
-  const models = ["gemini-3.1-pro-preview", "gemini-3-flash-preview"];
+  // Primary model is Flash 3 for speed and higher quota, fallback is Pro 3.1
+  const models = ["gemini-3-flash-preview", "gemini-3.1-pro-preview"];
   let lastError: any;
 
   if (typeof content === 'string' && content.trim().length < 50) {

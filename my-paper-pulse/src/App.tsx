@@ -138,7 +138,12 @@ export default function App() {
     } catch (error: any) {
       console.error('Analysis failed:', error);
       const errorMessage = error?.message || 'Failed to analyze paper. Please try again.';
-      alert(`Error: ${errorMessage}`);
+      
+      if (errorMessage.includes('Quota')) {
+        alert(`QUOTA EXCEEDED: ${errorMessage}\n\nPRESENTATION TIP: Pre-analyze your papers and use the "History" sidebar to show them instantly without calling the API!`);
+      } else {
+        alert(`Error: ${errorMessage}`);
+      }
     } finally {
       setIsLoading(false);
     }

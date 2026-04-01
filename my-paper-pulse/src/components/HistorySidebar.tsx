@@ -1,6 +1,6 @@
 import React from 'react';
 import { PaperAnalysis } from '../types';
-import { Clock, Trash2, ChevronRight, X, History } from 'lucide-react';
+import { Clock, Trash2, ChevronRight, X, History, Sparkles } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 interface HistorySidebarProps {
@@ -60,21 +60,33 @@ export const HistorySidebar: React.FC<HistorySidebarProps> = ({
               </button>
             </div>
 
-            <div className="p-4 bg-white/5 border-b border-white/10">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-white/40 mb-2">
-                Select 2+ papers to compare
-              </p>
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-neon-blue">
-                  {selectedIds.length} Selected
-                </span>
-                <button
-                  disabled={selectedIds.length < 2}
-                  onClick={onCompare}
-                  className="px-4 py-2 bg-neon-blue text-white rounded-lg text-xs font-bold uppercase tracking-widest disabled:opacity-30 disabled:cursor-not-allowed hover:shadow-[0_0_15px_rgba(0,180,255,0.4)] transition-all"
-                >
-                  Compare Papers
-                </button>
+            <div className="p-4 bg-white/5 border-b border-white/10 space-y-3">
+              <div className="p-3 bg-neon-green/10 border border-neon-green/20 rounded-xl">
+                <p className="text-[10px] font-bold uppercase tracking-widest text-neon-green flex items-center gap-2">
+                  <Sparkles size={12} />
+                  Presentation Tip
+                </p>
+                <p className="text-[11px] text-white/60 mt-1 leading-tight">
+                  Pre-analyze your papers today. They'll stay here in history and load <b>instantly</b> without using any API quota during your presentation!
+                </p>
+              </div>
+              
+              <div>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-white/40 mb-2">
+                  Select 2+ papers to compare
+                </p>
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-neon-blue">
+                    {selectedIds.length} Selected
+                  </span>
+                  <button
+                    disabled={selectedIds.length < 2}
+                    onClick={onCompare}
+                    className="px-4 py-2 bg-neon-blue text-white rounded-lg text-xs font-bold uppercase tracking-widest disabled:opacity-30 disabled:cursor-not-allowed hover:shadow-[0_0_15px_rgba(0,180,255,0.4)] transition-all"
+                  >
+                    Compare Papers
+                  </button>
+                </div>
               </div>
             </div>
 
