@@ -15,7 +15,7 @@ Research papers contain valuable knowledge, but extracting relevant processes, w
 - Large Language Models (LLMs)
 - Vector Database
 - Embedding Models
-- Python (Implementation Language)
+  
 
 ---
 
